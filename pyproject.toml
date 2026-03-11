@@ -1,7 +1,0 @@
-[project]
-name = "fast-ai"
-version = "0.1.0"
-description = "Re-construction of fast-ai stable diffusion library"
-readme = "README.md"
-requires-python = ">=3.12"
-dependencies = []
