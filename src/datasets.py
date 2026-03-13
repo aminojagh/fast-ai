@@ -76,4 +76,6 @@ def show_images(ims:list, # Images to show
     if titles: assert len(ims) == len(titles), "the number of images and titles must be the same"
     "Show all images `ims` as subplots with `rows` using `titles`"
     axs = get_grid(len(ims), nrows, ncols, **kwargs)[1].flat[:len(ims)]
-    for im,t,ax in zip(ims, titles or [], axs): show_image(im, ax=ax, title=t)
+    titles = titles or [None] * len(ims)
+    for im,t,ax in zip(ims, titles, axs): show_image(im, ax=ax, title=t)
+    return axs

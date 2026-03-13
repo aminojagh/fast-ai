@@ -39,7 +39,7 @@ def fit(model, train_dl, valid_dl, opt, loss_func, epochs):
         evaluate(model, valid_dl, loss_func)
 
 
-def get_dl(train_ds, valid_ds, bs, collate_fn, min_bs = 8):
+def get_dls(train_ds, valid_ds, bs, collate_fn, min_bs = 8):
     last_train_batch_len = len(train_ds) % bs
     train_dl = DataLoader(
         train_ds,
