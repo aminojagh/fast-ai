@@ -1,0 +1,52 @@
+name: Sync src to Google Drive
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - '.github/workflows/sync-src-to-drive.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-src-to-google-drive-main
+  cancel-in-progress: false
+
+jobs:
+  sync-src:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install rclone
+        run: |
+          curl -fsSL https://rclone.org/install.sh | sudo bash
+
+      - name: Write rclone config
+        env:
+          RCLONE_CONFIG: ${{ secrets.RCLONE_CONFIG }}
+        run: |
+          mkdir -p ~/.config/rclone
+          printf '%s\n' "$RCLONE_CONFIG" > ~/.config/rclone/rclone.conf
+          chmod 600 ~/.config/rclone/rclone.conf
+
+      - name: Preview sync
+        run: |
+          rclone sync ./src gdrive_minisd:src \
+            --dry-run \
+            --fast-list \
+            --checksum \
+            -vv
+
+      - name: Sync src to Google Drive
+        run: |
+          rclone sync ./src gdrive_minisd:src \
+            --fast-list \
+            --checksum \
+            -vv
