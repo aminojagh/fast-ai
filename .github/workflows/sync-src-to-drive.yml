@@ -9,6 +9,9 @@ on:
       - '.github/workflows/sync-src-to-drive.yml'
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 permissions:
   contents: read
 
@@ -22,7 +25,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install rclone
         run: |
@@ -36,7 +39,7 @@ jobs:
           printf '%s\n' "$RCLONE_CONFIG" > ~/.config/rclone/rclone.conf
           chmod 600 ~/.config/rclone/rclone.conf
 
-      - name: Preview sync
+      - name: Preview sync (dry-run)
         run: |
           rclone sync ./src gdrive_minisd:src \
             --dry-run \
