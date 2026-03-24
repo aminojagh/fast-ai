@@ -49,21 +49,24 @@ def fit(model, train_dl, valid_dl, opt, loss_func, epochs, ae_loss = False):
         evaluate(model, valid_dl, loss_func, ae_loss)
 
 
-def get_dls(train_ds, valid_ds, bs, collate_fn, min_bs = 8):
+from torch.utils.data import DataLoader
+def get_dls(train_ds, valid_ds, bs, collate_fn, min_bs = 8, **kwargs):
     last_train_batch_len = len(train_ds) % bs
     train_dl = DataLoader(
         train_ds,
         bs,
         shuffle=True,
         drop_last=(last_train_batch_len > 0) and (last_train_batch_len < min_bs),
-        collate_fn=collate_fn
+        collate_fn=collate_fn,
+        **kwargs
         )
     valid_dl = DataLoader(
         valid_ds,
         bs,
         shuffle=False,
         drop_last=False,
-        collate_fn=collate_fn
+        collate_fn=collate_fn,
+        **kwargs
         )
     return train_dl, valid_dl
 

@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from operator import itemgetter
 from torch.utils.data import default_collate
+from src.training import get_dls
 
 def inplace(f):
     def _f(b):
@@ -79,3 +80,11 @@ def show_images(ims:list, # Images to show
     titles = titles or [None] * len(ims)
     for im,t,ax in zip(ims, titles, axs): show_image(im, ax=ax, title=t)
     return axs
+
+
+class DataLoaders:
+    def __init__(self, *dls): self.train,self.valid = dls[:2]
+    @classmethod
+    def from_dd(cls, dd, batch_size, as_tuple=True, **kwargs):
+        f = collate_dict(dd['train'])
+        return cls(*get_dls(*dd.values(), bs=batch_size, collate_fn=f, **kwargs))
