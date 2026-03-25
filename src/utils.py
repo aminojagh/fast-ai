@@ -43,3 +43,11 @@ def chunked(it: Iterator, chunk_sz=None, drop_last=False, n_chunks=None, pad=Fal
             if pad: yield res + [pad_val]*(chunk_sz-len(res))
             else: yield res
         else: return
+
+import torch, random, numpy as np
+#|export --> utils
+def set_seed(seed, deterministic=False):
+    torch.use_deterministic_algorithms(deterministic)
+    torch.manual_seed(seed)
+    random.seed(seed)
+    np.random.seed(seed)
