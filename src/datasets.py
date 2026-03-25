@@ -17,7 +17,7 @@ def collate_dict(ds):
     return _f
 
 
-def show_image(im, ax=None, figsize=None, title=None, noframe=True):
+def show_image(im, ax=None, figsize=None, title=None, noframe=True, **kwargs):
     "Show a PIL or PyTorch image on `ax`."
     if all(hasattr(im,attr) for attr in ('cpu','permute','detach')):
         im = im.detach().cpu()
@@ -25,10 +25,10 @@ def show_image(im, ax=None, figsize=None, title=None, noframe=True):
     elif not isinstance(im,np.ndarray): im=np.array(im)
     if im.shape[-1]==1: im=im[...,0]
     if ax is None: _,ax = plt.subplots(figsize=figsize)
-    ax.imshow(im)
+    ax.imshow(im, **kwargs)
     if title is not None: ax.set_title(title)
     ax.set_xticks([]) 
-    ax.set_yticks([]) 
+    ax.set_yticks([])
     if noframe: ax.axis('off')
     return ax
 
