@@ -1,4 +1,5 @@
-import math,torch,matplotlib.pyplot as plt
+import math,torch, warnings
+import matplotlib.pyplot as plt
 from collections.abc import Mapping
 from operator import attrgetter
 from functools import partial
@@ -17,7 +18,22 @@ class CancelFitException(Exception): pass
 class CancelBatchException(Exception): pass
 class CancelEpochException(Exception): pass
 
-class Callback: order = 0
+class Callback:
+  order = 0
+  _fwd = 'model', 'opt', 'batch', 'epoch'
+
+  def __getattr__(self, name):
+    if name in self._fwd: return getattr(self.learn, name)
+    raise AttributeError(name)
+
+  def __setattr__(self, name, value):
+    if name in self._fwd: warnings.warn(f"Setting {name} in callback. Did you mean to set `self.learn.{name}`?")
+    super().__setattr__(name, value)
+  
+  @property
+  def training(self): return self.model.training
+    
+  
 
 def run_cbs(cbs, method_nm, learn=None):
     for cb in sorted(cbs, key=attrgetter('order')):
