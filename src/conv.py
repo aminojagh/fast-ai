@@ -17,3 +17,13 @@ def to_device(x, device=def_device):
     return type(x)(to_device(o, device) for o in x)
 
 def collate_device(b): return to_device(default_collate(b))
+
+
+def show_model_dag(model, xb):
+  print(f"input shape: {xb.shape}")
+  print("===========")
+  with torch.no_grad():
+    for i, l in enumerate(model):
+      xb = l(xb)
+      print(f"layer {i}|[{type(l).__name__}] output shape: {xb.shape}")
+      print("===========")
