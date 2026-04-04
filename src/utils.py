@@ -45,9 +45,36 @@ def chunked(it: Iterator, chunk_sz=None, drop_last=False, n_chunks=None, pad=Fal
         else: return
 
 import torch, random, numpy as np
-#|export --> utils
 def set_seed(seed, deterministic=False):
     torch.use_deterministic_algorithms(deterministic)
     torch.manual_seed(seed)
     random.seed(seed)
     np.random.seed(seed)
+
+def noop(x): return x
+
+
+from IPython import get_ipython
+import sys
+
+def in_colab():
+    "Check if the code is running in Google Colaboratory"
+    return 'google.colab' in sys.modules
+
+def ipython_shell():
+    "Same as `get_ipython` but returns `False` if not in IPython"
+    try: return get_ipython()
+    except NameError: return False
+
+def in_ipython():
+    "Check if code is running in some kind of IPython environment"
+    return bool(ipython_shell())
+
+def in_jupyter():
+    "Check if the code is running in a jupyter notebook"
+    if not in_ipython(): return False
+    return 'InteractiveShell' in ipython_shell().__class__.__name__
+
+def in_notebook():
+    "Check if the code is running in a jupyter notebook"
+    return in_colab() or in_jupyter()
