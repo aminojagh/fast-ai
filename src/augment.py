@@ -1,0 +1,96 @@
+import torch,random
+from torch import nn
+from torch.nn import init
+
+from src.utils import in_notebook
+from src.learner import SingleBatchCB, Learner, Callback, to_cpu
+from src.activations import Hooks
+
+def _flops(x, h, w):
+    if x.dim()<3: return x.numel()
+    if x.dim()==4: return x.numel()*h*w
+
+def summary(self:Learner):
+    res = '|Module|Input|Output|Num params|MFLOPS|\n|--|--|--|--|--|\n'
+    totp,totf = 0,0
+    def _f(hook, mod, inp, outp):
+        nonlocal res,totp,totf
+        nparms = sum(o.numel() for o in mod.parameters())
+        totp += nparms
+        *_,h,w = outp.shape
+        flops = sum(_flops(o, h, w) for o in mod.parameters())/1e6
+        totf += flops
+        res += f'|{type(mod).__name__}|{tuple(inp[0].shape)}|{tuple(outp.shape)}|{nparms}|{flops:.1f}|\n'
+    with Hooks(self.model, _f) as hooks: self.fit(1, lr=1, train=False, cbs=[SingleBatchCB()])
+    print(f"Tot params: {totp}; MFLOPS: {totf:.1f}")
+    if in_notebook():
+        from IPython.display import Markdown
+        return Markdown(res)
+    else: print(res)
+
+# TODO: refactor this code ASAP !!!
+Learner.summary = summary
+
+
+class CapturePreds(Callback):
+    def before_fit(self, learn): self.all_inps,self.all_preds,self.all_targs = [],[],[]
+    def after_batch(self, learn):
+        self.all_inps.append(to_cpu(learn.batch[0]))
+        self.all_preds.append(to_cpu(learn.preds))
+        self.all_targs.append(to_cpu(learn.batch[1]))
+    def after_fit(self, learn):
+        self.all_preds,self.all_targs,self.all_inps = map(torch.cat, [self.all_preds,self.all_targs,self.all_inps])
+
+def capture_preds(self: Learner, cbs=[], inps=False):
+    cp = CapturePreds()
+    self.fit(1, train=False, cbs=[cp]+cbs)
+    res = cp.all_preds,cp.all_targs
+    if inps: res = res+(cp.all_inps,)
+    return res
+Learner.capture_preds = capture_preds
+
+
+def _rand_erase1(x, pct, xm, xs, mn, mx):
+    szx = int(pct*x.shape[-2])
+    szy = int(pct*x.shape[-1])
+    stx = int(random.random()*(1-pct)*x.shape[-2])
+    sty = int(random.random()*(1-pct)*x.shape[-1])
+    init.normal_(x[:,:,stx:stx+szx,sty:sty+szy], mean=xm, std=xs)
+    x.clamp_(mn, mx)
+
+
+def rand_erase(x, pct=0.2, max_num = 4):
+    xm,xs,mn,mx = x.mean(),x.std(),x.min(),x.max()
+    num = random.randint(0, max_num)
+    # print(f"inside rand_erase: num = {num}")
+    for i in range(num): _rand_erase1(x, pct, xm, xs, mn, mx)
+    return x
+
+
+class RandErase(nn.Module):
+    def __init__(self, pct=0.2, max_num=4):
+        super().__init__()
+        self.pct,self.max_num = pct,max_num
+    def forward(self, x): return rand_erase(x, self.pct, self.max_num)
+
+
+def _rand_copy1(x, pct):
+    szx = int(pct*x.shape[-2])
+    szy = int(pct*x.shape[-1])
+    stx1 = int(random.random()*(1-pct)*x.shape[-2])
+    sty1 = int(random.random()*(1-pct)*x.shape[-1])
+    stx2 = int(random.random()*(1-pct)*x.shape[-2])
+    sty2 = int(random.random()*(1-pct)*x.shape[-1])
+    x[:,:,stx1:stx1+szx,sty1:sty1+szy] = x[:,:,stx2:stx2+szx,sty2:sty2+szy]
+
+
+def rand_copy(x, pct=0.2, max_num = 4):
+    num = random.randint(0, max_num)
+    for i in range(num): _rand_copy1(x, pct)
+    return x
+
+class RandCopy(nn.Module):
+    def __init__(self, pct=0.2, max_num=4):
+        super().__init__()
+        self.pct,self.max_num = pct,max_num
+    def forward(self, x): return rand_copy(x, self.pct, self.max_num)

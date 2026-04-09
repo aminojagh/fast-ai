@@ -12,6 +12,7 @@ from fastprogress import progress_bar,master_bar
 
 from src.conv import def_device, to_device
 from src.utils import store_attr
+from src.datasets import show_images
 
 
 class CancelFitException(Exception): pass
@@ -257,3 +258,16 @@ def lr_find(self:Learner, gamma=1.3, max_mult=3, start_lr=1e-5, max_epochs=10):
     self.fit(max_epochs, lr=start_lr, cbs=[LRFinderCB(gamma=gamma, max_mult=max_mult)])
 
 Learner.lr_find = lr_find
+
+
+def show_image_batch(self:Learner, max_n=9, cbs=[], **kwargs):
+    self.fit(1, cbs=[SingleBatchCB()]+cbs)
+    show_images(self.batch[0][:max_n], **kwargs)
+
+Learner.show_image_batch = show_image_batch
+
+
+class CompletionCB(Callback):
+    def before_fit(self, learn): self.count = 0
+    def after_batch(self, learn): self.count += 1
+    def after_fit(self, learn): print(f'Completed {self.count} batches')
