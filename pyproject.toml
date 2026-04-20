@@ -8,6 +8,7 @@ dependencies = [
     "accelerate>=1.13.0",
     "datasets>=4.7.0",
     "diffusers>=0.37.1",
+    "einops>=0.8.2",
     "fastprogress>=1.1.5",
     "ffmpeg>=1.4",
     "ipykernel>=7.2.0",
