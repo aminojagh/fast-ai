@@ -33,7 +33,13 @@ Learner.summary = summary
 
 
 class CapturePreds(Callback):
-    def before_fit(self, learn): self.all_inps,self.all_preds,self.all_targs = [],[],[]
+    def __init__(self, keep_loss):
+        super().__init__()
+        self.keep_loss = keep_loss
+    def before_fit(self, learn):
+        self.all_inps,self.all_preds,self.all_targs = [],[],[]
+        # we don't need the loss. we just need to capture predictions
+        if not self.keep_loss: learn.get_loss = lambda *args, **kwargs: ...
     def after_batch(self, learn):
         self.all_inps.append(to_cpu(learn.batch[0]))
         self.all_preds.append(to_cpu(learn.preds))
@@ -41,8 +47,8 @@ class CapturePreds(Callback):
     def after_fit(self, learn):
         self.all_preds,self.all_targs,self.all_inps = map(torch.cat, [self.all_preds,self.all_targs,self.all_inps])
 
-def capture_preds(self: Learner, cbs=[], inps=False):
-    cp = CapturePreds()
+def capture_preds(self: Learner, cbs=[], inps=False, keep_loss=False):
+    cp = CapturePreds(keep_loss)
     self.fit(1, train=False, cbs=[cp]+cbs)
     res = cp.all_preds,cp.all_targs
     if inps: res = res+(cp.all_inps,)
