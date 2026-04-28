@@ -51,7 +51,9 @@ def set_seed(seed, deterministic=False):
     random.seed(seed)
     np.random.seed(seed)
 
-def noop(x): return x
+def noop (x=None, *args, **kwargs):
+    "Do nothing"
+    return x
 
 
 from IPython import get_ipython
