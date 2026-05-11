@@ -5,6 +5,8 @@ from torch.nn import init
 from src.utils import in_notebook
 from src.learner import SingleBatchCB, Learner, Callback, to_cpu
 from src.activations import Hooks
+from torch import distributions, nn
+from src.resnet import ResBlock
 
 def _flops(x, h, w):
     if x.dim()<3: return x.numel()
@@ -100,3 +102,40 @@ class RandCopy(nn.Module):
         super().__init__()
         self.pct,self.max_num = pct,max_num
     def forward(self, x): return rand_copy(x, self.pct, self.max_num)
+
+
+
+#|export
+class Dropout(nn.Module):
+    def __init__(self, p=0.1):
+        super().__init__()
+        self.p = p
+
+    def forward(self, x):
+        if not self.training: return x
+        dist = distributions.binomial.Binomial(tensor(1.0).to(x.device), probs=1-self.p)
+        return x * dist.sample(x.size()) * 1/(1-self.p)
+    
+
+#|export
+def get_dropmodel(
+    act=nn.ReLU,
+    nfs=(16,32,64,128,256,512),
+    norm=nn.BatchNorm2d,
+    drop=0.0
+):
+    layers = [
+        ResBlock(1, 16, ks=5, stride=1, act=act, norm=norm),
+        nn.Dropout2d(drop)
+    ]
+    layers += [
+        ResBlock(nfs[i], nfs[i+1], act=act, norm=norm, stride=2)
+        for i in range(len(nfs)-1)
+    ]
+    layers += [
+        nn.Flatten(),
+        Dropout(drop),
+        nn.Linear(nfs[-1], 10, bias=False),
+        nn.BatchNorm1d(10)
+    ]
+    return nn.Sequential(*layers)
