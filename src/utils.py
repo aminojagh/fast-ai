@@ -154,3 +154,13 @@ def urlread(url, data=None, headers=None, decode=True, return_json=False, return
     if decode: res = res.decode()
     if return_json: res = json.loads(res)
     return (res,dict(hdrs)) if return_headers else res
+
+
+def recursive_map(func, data):
+    """
+    Recursively applies a function to all non-tuple elements inside a nested tuple.
+    """
+    return tuple(
+        recursive_map(func, item) if isinstance(item, tuple) else func(item)
+        for item in data
+    )

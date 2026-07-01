@@ -6,7 +6,9 @@ class BaseSchedCB(Callback):
   def __init__(self, sched): self.sched = sched
   def before_fit(self, learn): self.schedo = self.sched(learn.opt)
   def _step(self, learn):
-    if learn.training: self.schedo.step()
+    # if learn.training: self.schedo.step()
+    if learn.training and getattr(learn, "did_opt_step", True):
+        self.schedo.step()
 
 class BatchSchedCB(BaseSchedCB):
   def after_batch(self, learn): self._step(learn)

@@ -11,7 +11,7 @@ from fastprogress import progress_bar,master_bar
 
 
 from src.conv import def_device, to_device
-from src.utils import store_attr
+from src.utils import store_attr, recursive_map
 from src.datasets import show_images
 
 
@@ -76,6 +76,22 @@ class MetricsCB(Callback):
         x,y = to_cpu((x,y))
         for m in self.metrics.values(): m.update(to_cpu(learn.preds), y)
         self.loss.update(to_cpu(learn.loss), weight=len(x))
+    
+    # def after_loss(self, learn):
+    #     if torch.isnan(learn.loss):
+    #        log = "Found NaN loss"
+    #        log += f"\nPrediction Stats: Min = {learn.preds.min()} | Max = {learn.preds.max()} | Shape = {learn.preds.shape}"
+    #        log += f"\nInput Stats: Min = {recursive_map(lambda x: x.min(), learn.batch)} | Max = {recursive_map(lambda x: x.max(), learn.batch)}"
+    #        print(log)
+
+    # def after_backward(self, learn):
+    #     grad_list = []
+    #     with torch.no_grad():
+    #         for p in learn.model.parameters():
+    #             if p.grad is not None:
+    #                 param_norm = p.grad.detach().data.norm(2)
+    #                 grad_list.append(param_norm.item())
+    #     print(f"grad norm log --> min: {min(grad_list)} | max: {max(grad_list)} | len: {len(grad_list)}")
 
 class DeviceCB(Callback):
     def __init__(self, device=def_device): store_attr()

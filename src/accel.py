@@ -7,20 +7,40 @@ from src.conv import def_device
 
 class MixedPrecision(TrainCB):
     order = DeviceCB.order+10
+    def __init__(
+            self,
+            n_inp=1,
+            autocast_dtype = torch.float16,
+            max_grad_norm=100.0
+    ):
+        super().__init__(n_inp=n_inp)
+        self.ac_dtype = autocast_dtype
+        self.max_grad_norm = max_grad_norm
     
     def before_fit(self, learn): self.scaler = torch.amp.GradScaler(def_device)
 
     def before_batch(self, learn):
-        self.autocast = torch.autocast("cuda", dtype=torch.float16)
+        self.autocast = torch.autocast("cuda", self.ac_dtype)
         self.autocast.__enter__()
 
     def after_loss(self, learn):
         self.autocast.__exit__(None, None, None)
-        
-    def backward(self, learn): self.scaler.scale(learn.loss).backward()
+
+    def backward(self, learn):
+        self.scaler.scale(learn.loss).backward()
+        torch.nn.utils.clip_grad_norm_(
+            learn.model.parameters(),
+            max_norm=self.max_grad_norm
+        )
+
     def step(self, learn):
+        old_scale = self.scaler.get_scale()
         self.scaler.step(learn.opt)
         self.scaler.update()
+        learn.did_opt_step = self.scaler.get_scale() >= old_scale
+        # new_scale < old_scale means
+        # AMP found inf/nan gradients, skipped optimizer.step(),
+        # and reduced the scale.
 
 
 class AccelerateCB(TrainCB):
