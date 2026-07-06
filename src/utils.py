@@ -1,6 +1,15 @@
-# https://github.com/AnswerDotAI/fastcore/blob/main/fastcore/test.py
+import sys, math, torch, random, urllib, json, shutil
+import numpy as np
+from pathlib import Path
 from functools import partial
 from typing import Iterable,Generator
+from typing import Iterable,Generator, Iterator
+from itertools import islice
+from IPython import get_ipython
+from urllib.error import HTTPError
+from urllib.parse import urlencode, urlparse, urlunparse
+
+# https://github.com/AnswerDotAI/fastcore/blob/main/fastcore/test.py
 def is_close(a,b,eps=1e-5):
     "Is `a` within `eps` of `b`"
     if hasattr(a, '__array__') or hasattr(b,'__array__'):
@@ -18,9 +27,7 @@ def test_close(a,b,eps=1e-5):
     "`test` that `a` is within `eps` of `b`"
     test(a,b,partial(is_close,eps=eps),'close')
 
-from typing import Iterable,Generator, Iterator
-import sys, math
-from itertools import islice
+
 # https://github.com/AnswerDotAI/fastcore/blob/main/fastcore/basics.py#L437
 def store_attr():
     fr = sys._getframe(1)
@@ -44,7 +51,7 @@ def chunked(it: Iterator, chunk_sz=None, drop_last=False, n_chunks=None, pad=Fal
             else: yield res
         else: return
 
-import torch, random, numpy as np
+
 def set_seed(seed, deterministic=False):
     torch.use_deterministic_algorithms(deterministic)
     torch.manual_seed(seed)
@@ -56,8 +63,7 @@ def noop (x=None, *args, **kwargs):
     return x
 
 
-from IPython import get_ipython
-import sys
+
 
 def in_colab():
     "Check if the code is running in Google Colaboratory"
@@ -82,13 +88,6 @@ def in_notebook():
     return in_colab() or in_jupyter()
 
 
-#|export --> utils.net
-import urllib, json
-from urllib.error import HTTPError
-from urllib.parse import urlencode, urlparse, urlunparse
-from urllib.request import Request
-
-
 url_default_headers = {
     "Accept":
     "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
@@ -105,7 +104,7 @@ url_default_headers = {
 class _SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         if code in (307, 308):
-            new_req = Request(newurl, data=req.data, method=req.get_method())
+            new_req = urllib.request.Request(newurl, data=req.data, method=req.get_method())
             for k,v in req.headers.items(): new_req.add_header(k, v)
         else: new_req = super().redirect_request(req, fp, code, msg, headers, newurl)
         if new_req and urlparse(newurl).netloc != urlparse(req.full_url).netloc: new_req.remove_header('Authorization')
@@ -129,7 +128,7 @@ def urlquote(url):
 
 def urlwrap(url, data=None, headers=None):
     "Wrap `url` in a urllib `Request` with `urlquote`"
-    return url if isinstance(url,Request) else Request(urlquote(url), data=data, headers=headers or {})
+    return url if isinstance(url,urllib.request.Request) else urllib.request.Request(urlquote(url), data=data, headers=headers or {})
 
 def urlopen(url, data=None, headers=None, timeout=None, **kwargs):
     "Like `urllib.request.urlopen`, but first `urlwrap` the `url`, and encode `data`"
@@ -164,3 +163,24 @@ def recursive_map(func, data):
         recursive_map(func, item) if isinstance(item, tuple) else func(item)
         for item in data
     )
+
+
+
+def urlclean(url):
+    "Remove fragment, params, and querystring from `url` if present"
+    return urlunparse(urlparse(str(url))[:3]+('','',''))
+
+def urldest(url, dest=None):
+    name = urlclean(Path(url).name)
+    if dest is None: dest = name
+    dest = Path(dest)
+    return dest/name if dest.is_dir() else dest
+
+def urlsave(url, dest=None, headers={}):
+    "Retrieve `url` and save based on its name"
+    dest = urldest(url, dest)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req) as response, open(dest, "wb") as out_file:
+        shutil.copyfileobj(response, out_file)
+    return dest
